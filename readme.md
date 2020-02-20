@@ -31,25 +31,33 @@ entryRead('./src/index.js');
 
 ### @babel/traverse
 
-Babel Traverse（遍历）模块维护了整棵树的状态，并且负责替换、移除和添加节点。我们可以和 Babylon 一起使用来遍历和更新节点。
+Babel Traverse（遍历）模块维护了整棵树的状态，并且负责替换、移除和添加节点。
+
+我们使用 @babel/traverse 递归（或者使用队列）拿到所有依赖文件信息数组。
 
 ```javascript
-import * as parser from "@babel/parser";
-import traverse from "@babel/traverse";
+const fs = require('fs');
+const parser = require('@babel/parser');
+const traverse = require('@babel/traverse').default;
 
-const code = `function square(n) {
-  return n * n;
-}`;
+const entryContent = fs.readFileSync(filename, 'utf-8');
 
-const ast = parser.parse(code);
-
-traverse(ast, {
-  enter(path) {
-    if (path.isIdentifier({ name: "n" })) {
-      path.node.name = "x";
-    }
-  }
+let AST = parser.parse(entryContent, {
+  sourceType: "module",
 });
+
+// 依赖项
+const dependencies = [];
+
+// visitor
+traverse(AST, {
+  ImportDeclaration: (path) => {
+    const node = path.node;
+    const value = node.source.value;
+
+    dependencies.push(value);
+  }
+})
 ```
 
 ### @babel/core 、@babel/preset-env

@@ -58,13 +58,13 @@ function createGraph(filename) {
       asset.mapping[relativePath] = childsInfos.id;
 
       // 依赖去重
-      // if (!dependenciesHash[childsInfos.id]) {
-      //   dependenciesHash[childsInfos.id] = true;
-      //   queue.push(childsInfos);
-      // }
-      
-      queue.push(childsInfos);
-
+      if (!dependenciesHash[absoluteName]) {
+        dependenciesHash[absoluteName] = childsInfos.id;
+        asset.mapping[relativePath] = childsInfos.id;
+        queue.push(childsInfos);
+      } else {
+        asset.mapping[relativePath] = dependenciesHash[absoluteName];
+      }
     });
   }
 
@@ -79,6 +79,7 @@ function bundle(graph) {
   graph.forEach((mod) => {
     modules += `
       ${mod.id}: [
+        // 这里可以了解下 CommonJS、CMD 模块系统的实现
         function(require, module, exports){
           ${mod.code}
         },
@@ -87,33 +88,39 @@ function bundle(graph) {
     `
   });
 
-  return `(function(modules){
+  return `
+    (function(modules){
 
-    function require(id) {
-      const [fn, mapping] = modules[id];
+      function require(id) {
+        const [fn, mapping] = modules[id];
 
-      console.log('mapping', mapping);
+        console.log('mapping', mapping);
 
-      function localRequire(relativePath) {
-        console.log('mapping[relativePath]', mapping[relativePath]);
-        return require(mapping[relativePath]);
+        function localRequire(relativePath) {
+          console.log('mapping[relativePath]', mapping[relativePath]);
+          return require(mapping[relativePath]);
+        }
+
+        const module = {
+          exports: {}
+        }
+
+        // 实现包装每个 JS 文件的 require、mudule、exports
+        fn(localRequire, module, module.exports);
+
+        return module.exports;
       }
 
-      const module = {
-        exports: {}
-      }
-
-      fn(localRequire, module, module.exports);
-
-      return module.exports;
-    }
-
-    require(0);
-  })({${modules}})`;
+      // 执行 require(0)，即是执行入口文件
+      require(0);
+    })({${modules}})
+  `;
 }
 
 const graph = createGraph('./src/index.js');
 const result = bundle(graph);
 
-
 console.log('result', result);
+fs.mkdir('./dist', 0777, function (err) {
+  fs.writeFileSync("./dist/index.bundle.js", result);
+});
