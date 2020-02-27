@@ -62,4 +62,10 @@ traverse(AST, {
 
 ### @babel/core 、@babel/preset-env
 
-将 ES6 编译的的 AST 代码转回 ES5 语法代码。
+将 ES6 编译的的 AST 代码转回 ES5 语法代码。’
+
+## Run
+
+```
+$ node webpack.config.js
+```
